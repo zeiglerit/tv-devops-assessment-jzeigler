@@ -23,6 +23,15 @@ export APP_NAME="express-app"
 export REPO_NAME="${APP_NAME}-repo"
 aws ecr create-repository --repository-name $REPO_NAME
 
+# in addition the following Actions secrets need to be set in Github:
+
+APP_NAME
+AWS_ACCESS_KEY_ID
+AWS_REGION
+AWS_ROLE_ARN
+AWS_SECRET_ACCESS_KEY
+ECR_REPO
+
 ## 2. Deploy ts app
 
 cd iac/
