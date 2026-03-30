@@ -41,4 +41,8 @@ docker build -t $REPO_NAME .
 docker tag $REPO_NAME:latest $ECR_URI:latest
 docker push $ECR_URI:latest
 
+## 4 Run server
 
+cd /app
+npm run build 
+npm start
