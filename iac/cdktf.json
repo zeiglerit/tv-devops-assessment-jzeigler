@@ -1,0 +1,8 @@
+{
+  "language": "typescript",
+  "app": "npx ts-node main.ts",
+  "projectId": "cdktf-iac-project",
+  "terraformProviders": ["hashicorp/aws@~> 5.0"],
+  "terraformModules": [],
+  "codeMakerOutput": "src"
+}

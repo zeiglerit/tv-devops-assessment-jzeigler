@@ -1,0 +1,21 @@
+{
+  "name": "cdktf-iac",
+  "version": "1.0.0",
+  "main": "main.ts",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "synth": "cdktf synth",
+    "deploy": "cdktf deploy",
+    "destroy": "cdktf destroy"
+  },
+  "devDependencies": {
+    "cdktf-cli": "^0.21.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "cdktf": "^0.21.0",
+    "@cdktf/provider-aws": "^21.0.0",
+    "constructs": "^10.3.0"
+  }
+}

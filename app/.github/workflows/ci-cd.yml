@@ -1,0 +1,74 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  AWS_REGION: us-east-1
+  APP_NAME: express-app
+  APP_DIR: app
+  IAC_DIR: infra
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get AWS Account ID
+        id: aws
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          docker build -t $APP_NAME:latest .
+
+      - name: Tag and push Docker image
+        run: |
+          ECR_REPO="${APP_NAME}-${{ steps.aws.outputs.account_id }}-repo"
+          ECR_URI="${{ steps.aws.outputs.account_id }}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
+          echo "ECR_URI=$ECR_URI" >> $GITHUB_ENV
+          docker tag $APP_NAME:latest "$ECR_URI:latest"
+          docker push "$ECR_URI:latest"
+
+      - name: Install CDKTF
+        run: npm install --global cdktf-cli@latest
+
+      - name: Install IaC dependencies
+        working-directory: ${{ env.IAC_DIR }}
+        run: npm install
+
+      - name: CDKTF Synth
+        working-directory: ${{ env.IAC_DIR }}
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+          APP_NAME: ${{ env.APP_NAME }}
+          ECR_URI: ${{ env.ECR_URI }}
+        run: cdktf synth
+
+      - name: CDKTF Deploy
+        working-directory: ${{ env.IAC_DIR }}
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+          APP_NAME: ${{ env.APP_NAME }}
+          ECR_URI: ${{ env.ECR_URI }}
+        run: cdktf deploy --auto-approve

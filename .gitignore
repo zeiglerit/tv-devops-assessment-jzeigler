@@ -1,3 +1,5 @@
 node_modules/
-dist/
+npm-debug.log
+cdktf.out/
 .env
+.DS_Store

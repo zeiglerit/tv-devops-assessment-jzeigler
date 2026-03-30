@@ -1,0 +1,273 @@
+{
+  "//": {
+    "metadata": {
+      "backend": "local",
+      "stackName": "cdktf-demo",
+      "version": "0.21.0"
+    },
+    "outputs": {
+    }
+  },
+  "data": {
+    "aws_caller_identity": {
+      "identity": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/identity",
+            "uniqueId": "identity"
+          }
+        }
+      }
+    }
+  },
+  "provider": {
+    "aws": [
+      {
+        "region": "us-east-1"
+      }
+    ]
+  },
+  "resource": {
+    "aws_cloudwatch_log_group": {
+      "logGroup": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/logGroup",
+            "uniqueId": "logGroup"
+          }
+        },
+        "name": "/ecs/express-app",
+        "retention_in_days": 7
+      }
+    },
+    "aws_ecr_repository": {
+      "ecrRepo": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/ecrRepo",
+            "uniqueId": "ecrRepo"
+          }
+        },
+        "force_delete": true,
+        "name": "express-app-${data.aws_caller_identity.identity.account_id}-repo"
+      }
+    },
+    "aws_ecs_cluster": {
+      "ecsCluster": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/ecsCluster",
+            "uniqueId": "ecsCluster"
+          }
+        },
+        "name": "express-app-cluster"
+      }
+    },
+    "aws_ecs_service": {
+      "ecsService": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/ecsService",
+            "uniqueId": "ecsService"
+          }
+        },
+        "cluster": "${aws_ecs_cluster.ecsCluster.id}",
+        "desired_count": 1,
+        "launch_type": "FARGATE",
+        "name": "express-app-service",
+        "network_configuration": {
+          "assign_public_ip": true,
+          "security_groups": [
+            "${aws_security_group.ecsSecurityGroup.id}"
+          ],
+          "subnets": [
+            "${aws_subnet.publicSubnet.id}"
+          ]
+        },
+        "task_definition": "${aws_ecs_task_definition.taskDef.arn}"
+      }
+    },
+    "aws_ecs_task_definition": {
+      "taskDef": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/taskDef",
+            "uniqueId": "taskDef"
+          }
+        },
+        "container_definitions": "[{\"name\":\"app\",\"image\":\"${aws_ecr_repository.ecrRepo.repository_url}:latest\",\"essential\":true,\"portMappings\":[{\"containerPort\":3000,\"hostPort\":3000}],\"logConfiguration\":{\"logDriver\":\"awslogs\",\"options\":{\"awslogs-group\":\"${aws_cloudwatch_log_group.logGroup.name}\",\"awslogs-region\":\"us-east-1\",\"awslogs-stream-prefix\":\"ecs\"}}}]",
+        "cpu": "256",
+        "execution_role_arn": "${aws_iam_role.executionRole.arn}",
+        "family": "express-app-task",
+        "memory": "512",
+        "network_mode": "awsvpc",
+        "requires_compatibilities": [
+          "FARGATE"
+        ],
+        "task_role_arn": "${aws_iam_role.taskRole.arn}"
+      }
+    },
+    "aws_iam_role": {
+      "executionRole": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/executionRole",
+            "uniqueId": "executionRole"
+          }
+        },
+        "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ecs-tasks.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+        "name": "express-app-execution-role"
+      },
+      "taskRole": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/taskRole",
+            "uniqueId": "taskRole"
+          }
+        },
+        "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ecs-tasks.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+        "name": "express-app-task-role"
+      }
+    },
+    "aws_iam_role_policy_attachment": {
+      "executionRolePolicy": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/executionRolePolicy",
+            "uniqueId": "executionRolePolicy"
+          }
+        },
+        "policy_arn": "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
+        "role": "${aws_iam_role.executionRole.name}"
+      }
+    },
+    "aws_internet_gateway": {
+      "igw": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/igw",
+            "uniqueId": "igw"
+          }
+        },
+        "vpc_id": "${aws_vpc.mainVpc.id}"
+      }
+    },
+    "aws_route": {
+      "publicDefaultRoute": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/publicDefaultRoute",
+            "uniqueId": "publicDefaultRoute"
+          }
+        },
+        "destination_cidr_block": "0.0.0.0/0",
+        "gateway_id": "${aws_internet_gateway.igw.id}",
+        "route_table_id": "${aws_route_table.publicRouteTable.id}"
+      }
+    },
+    "aws_route_table": {
+      "publicRouteTable": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/publicRouteTable",
+            "uniqueId": "publicRouteTable"
+          }
+        },
+        "vpc_id": "${aws_vpc.mainVpc.id}"
+      }
+    },
+    "aws_route_table_association": {
+      "publicSubnetAssociation": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/publicSubnetAssociation",
+            "uniqueId": "publicSubnetAssociation"
+          }
+        },
+        "route_table_id": "${aws_route_table.publicRouteTable.id}",
+        "subnet_id": "${aws_subnet.publicSubnet.id}"
+      }
+    },
+    "aws_security_group": {
+      "ecsSecurityGroup": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/ecsSecurityGroup",
+            "uniqueId": "ecsSecurityGroup"
+          }
+        },
+        "description": "Allow ECS task traffic",
+        "egress": [
+          {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "description": null,
+            "from_port": 0,
+            "ipv6_cidr_blocks": null,
+            "prefix_list_ids": null,
+            "protocol": "-1",
+            "security_groups": null,
+            "self": null,
+            "to_port": 0
+          }
+        ],
+        "ingress": [
+          {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "description": null,
+            "from_port": 3000,
+            "ipv6_cidr_blocks": null,
+            "prefix_list_ids": null,
+            "protocol": "tcp",
+            "security_groups": null,
+            "self": null,
+            "to_port": 3000
+          }
+        ],
+        "vpc_id": "${aws_vpc.mainVpc.id}"
+      }
+    },
+    "aws_subnet": {
+      "publicSubnet": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/publicSubnet",
+            "uniqueId": "publicSubnet"
+          }
+        },
+        "cidr_block": "10.0.1.0/24",
+        "map_public_ip_on_launch": true,
+        "vpc_id": "${aws_vpc.mainVpc.id}"
+      }
+    },
+    "aws_vpc": {
+      "mainVpc": {
+        "//": {
+          "metadata": {
+            "path": "cdktf-demo/mainVpc",
+            "uniqueId": "mainVpc"
+          }
+        },
+        "cidr_block": "10.0.0.0/16",
+        "enable_dns_hostnames": true,
+        "enable_dns_support": true
+      }
+    }
+  },
+  "terraform": {
+    "backend": {
+      "local": {
+        "path": "/mnt/c/Users/Me/Documents/git/tv-devops-assessment-jzeigler/iac/terraform.cdktf-demo.tfstate"
+      }
+    },
+    "required_providers": {
+      "aws": {
+        "source": "aws",
+        "version": "6.25.0"
+      }
+    }
+  }
+}
